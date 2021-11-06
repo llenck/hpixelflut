@@ -1,4 +1,4 @@
-module FlutIO (write_image, read_pixel_block) where
+module FlutIO (pixelflut, write_image, read_pixel_block) where
 
 import Data.Maybe (catMaybes)
 import Data.ByteString.Char8 (ByteString, pack, unpack)
@@ -53,3 +53,10 @@ read_pixel_block s cs = do
             let colors = map (head . drop 3 . words) $ lines s
             let color_bytes = map (\s -> (take 2 s, take 2 $ drop 2 s, take 2 $ drop 4 s)) colors
             pure $ map (\(a, b, c) -> (readHex a, readHex b, readHex c)) color_bytes
+
+pixelflut :: String -> String -> [Socket -> IO [(Int, Int, Int, Int, Int)]] -> IO ()
+pixelflut host port ims = do
+    connect host port f
+    where f (sock, _) = do
+            mapM (\f -> f sock >>= write_image sock) ims
+            pure ()
