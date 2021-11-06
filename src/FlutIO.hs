@@ -1,4 +1,4 @@
-module FlutIO where
+module FlutIO (write_image, read_pixel_block) where
 
 import Data.Maybe (catMaybes)
 import Data.ByteString.Char8 (ByteString, pack, unpack)
@@ -16,9 +16,6 @@ send_px s x y r g b = sendS s $ fmt_px x y r g b
 
 write_image :: Socket -> [(Int, Int, Int, Int, Int)] -> IO ()
 write_image s = mapM (\(a, b, c, d, e) -> send_px s a b c d e) >=> (\_ -> pure ())
-
---concatJustStrings :: [Maybe ByteString] -> String
---concatJustStrings = foldl (++) "" . map unpack . catMaybes
 
 recv_exact :: Socket -> Int -> IO (Maybe String)
 recv_exact sock n = do
