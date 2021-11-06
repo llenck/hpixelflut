@@ -1,5 +1,6 @@
 module FlutIO (pixelflut, write_image, read_pixel_block) where
 
+import Data.Function
 import Data.Maybe (catMaybes)
 import Data.ByteString.Char8 (ByteString, pack, unpack)
 import Control.Monad
@@ -58,5 +59,5 @@ pixelflut :: String -> String -> [Socket -> IO [(Int, Int, Int, Int, Int)]] -> I
 pixelflut host port ims = do
     connect host port f
     where f (sock, _) = do
-            mapM (\f -> f sock >>= write_image sock) ims
+            mapM ((sock&) >=> write_image sock) ims
             pure ()
