@@ -105,6 +105,30 @@ paddle rb im (s, _) = do
 
             paddle_ s n_im (c + 1)
 
+rotat_l :: (Int, Int) -> (Int, Int)
+rotat_l (0, 1) = (-1, 0)
+rotat_l (-1, 0) = (0, -1)
+rotat_l (0, -1) = (1, 0)
+rotat_l (1, 0) = (0, 1)
+rotat_l _ = error "rotat no werk"
+
+rotat_r = rotat_l . rotat_l . rotat_l
+
+ant :: (Socket, SockAddr) -> IO ()
+ant (s, _) = do
+    ant_ 500 500 (1, 0)
+    where ant_ x y (dx, dy) = do
+            let (nx, ny) = (x + dx, y + dy)
+            here_px <- read_pixel_block s [(nx, ny)] >>= pure . head
+            let px_black = (>) 370 $ (\(r, b, g) -> r + b + g) here_px
+
+            let (new_px, new_dir) = if px_black
+                    then ([(nx, ny, 255, 255, 255)], rotat_l (dx, dy))
+                    else ([(nx, ny, 0, 0, 0)], rotat_r (dx, dy))
+
+            write_image s new_px
+            ant_ nx ny new_dir
+
 main = do
     args <- getArgs
 
@@ -113,6 +137,7 @@ main = do
         Just "gay" -> pure $ paddle True paddle_im
         Just "border" -> pure $ conf_im border
         Just "clear" -> pure $ conf_im clear
+        Just "ant" -> pure ant
         Just s -> read_im s >>= pure . paddle False
 
     connect "pixelflut.uwu.industries" "1234" f
