@@ -10,7 +10,7 @@ import Codec.Picture (readImageWithMetadata, convertRGBA8, pixelAt, PixelRGBA8(P
 import Codec.Picture.Metadata as M (Metadatas, Keys(Width, Height), lookup)
 
 import FlutFmt
-import FlutIO (pixelflut, write_image, read_pixel_block)
+import FlutIO (conf_im, write_image, read_pixel_block)
 import Rainbow
 
 fromRight :: Either a b -> b
@@ -63,15 +63,19 @@ copy fx fy w h tx ty s = do
     let im = map (\((x, y), (r, g, b)) -> (x + dx, y + dy, r, g, b)) $ zip coords pixels
     pure im
 
-clear _ = pure $ [(x, y, 0, 0, 0) | x <- [0..1280], y <- [0..720]]
-
-
 block x y w h r g b = [(x, y, r, g, b) | x <- [x..x + w], y <- [y..y + h]]
+
+clear = block 0 0 1280 720 0 0 0
+border =
+    (block 0 0 1280 10 255 255 255) ++    -- up
+    (block 0 10 10 720 255 255 255) ++    -- left
+    (block 10 710 1280 10 255 255 255) ++ -- down
+    (block 1270 10 10 700 255 255 255)    -- right
 
 paddle_im = block 0 0 10 100 255 255 255
 
-paddle :: [(Int, Int, Int, Int, Int)] -> (Socket, SockAddr) -> IO ()
-paddle im (s, _) = do
+paddle :: Bool -> [(Int, Int, Int, Int, Int)] -> (Socket, SockAddr) -> IO ()
+paddle rb im (s, _) = do
     hSetBuffering stdin NoBuffering
     paddle_ s im 0
     pure ()
@@ -91,19 +95,24 @@ paddle im (s, _) = do
                     'D' -> 50
                     _   -> 0
 
-            let n_im = {- recolor_im (rainbow c) $ -} move_im dx dy im
+            let moved_im = move_im dx dy im
+            let n_im = if rb
+                then recolor_im (rainbow c) moved_im
+                else moved_im
+
             write_image s $ black_im im
             write_image s n_im
 
             paddle_ s n_im (c + 1)
 
 main = do
-    --pixelflut "pixelflut.uwu.industries" "1234" $ [\_ -> pure $ block 0 710 1280 10 255 255 255]
-    --pixelflut "pixelflut.uwu.industries" "1234" $ [clear]
     args <- getArgs
-    im <- case (listToMaybe args) of
-        Nothing -> pure paddle_im
-        Just s -> read_im s
 
-    connect "pixelflut.uwu.industries" "1234" $ paddle im
-    putStrLn "Done :)"
+    f <- case (listToMaybe args) of
+        Nothing -> pure $ paddle False paddle_im
+        Just "gay" -> pure $ paddle True paddle_im
+        Just "border" -> pure $ conf_im border
+        Just "clear" -> pure $ conf_im clear
+        Just s -> read_im s >>= pure . paddle False
+
+    connect "pixelflut.uwu.industries" "1234" f

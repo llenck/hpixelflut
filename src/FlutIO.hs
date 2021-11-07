@@ -1,4 +1,4 @@
-module FlutIO (pixelflut, write_image, read_pixel_block) where
+module FlutIO (conf_im, write_image, read_pixel_block) where
 
 import Data.Function
 import Data.Maybe (catMaybes)
@@ -17,6 +17,9 @@ send_px s x y r g b = sendS s $ fmt_px x y r g b
 
 write_image :: Socket -> [(Int, Int, Int, Int, Int)] -> IO ()
 write_image s = mapM (\(a, b, c, d, e) -> send_px s a b c d e) >=> (\_ -> pure ())
+
+conf_im :: [(Int, Int, Int, Int, Int)] -> (Socket, SockAddr) -> IO ()
+conf_im im (s, _) = write_image s im
 
 recv_exact :: Socket -> Int -> IO (Maybe String)
 recv_exact sock n = do
@@ -55,9 +58,9 @@ read_pixel_block s cs = do
             let color_bytes = map (\s -> (take 2 s, take 2 $ drop 2 s, take 2 $ drop 4 s)) colors
             pure $ map (\(a, b, c) -> (readHex a, readHex b, readHex c)) color_bytes
 
-pixelflut :: String -> String -> [Socket -> IO [(Int, Int, Int, Int, Int)]] -> IO ()
-pixelflut host port ims = do
-    connect host port f
-    where f (sock, _) = do
-            mapM ((sock&) >=> write_image sock) ims
-            pure ()
+--pixelflut :: String -> String -> [Socket -> IO [(Int, Int, Int, Int, Int)]] -> IO ()
+--pixelflut host port ims = do
+--    connect host port f
+--    where f (sock, _) = do
+--            mapM ((sock&) >=> write_image sock) ims
+--            pure ()
