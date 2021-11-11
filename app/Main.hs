@@ -6,41 +6,14 @@ import Control.Monad
 import Data.Maybe
 
 import Network.Simple.TCP
-import Codec.Picture (readImageWithMetadata, convertRGBA8, pixelAt, PixelRGBA8(PixelRGBA8))
-import Codec.Picture.Metadata as M (Metadatas, Keys(Width, Height), lookup)
+import Graphics.Text.TrueType(loadFontFile)
+import Graphics.Rasterific
+import Graphics.Rasterific.Texture
 
 import FlutFmt
 import FlutIO (conf_im, write_image, read_pixel_block)
+import FlutImage (read_im, move_im, recolor_im)
 import Rainbow
-
-fromRight :: Either a b -> b
-fromRight (Left _) = error "fromRight called on Left"
-fromRight (Right a) = a
-
-get_dims :: M.Metadatas -> Maybe (Int, Int)
-get_dims meta = do
-    w <- M.lookup M.Width meta
-    h <- M.lookup M.Height meta
-    pure (fromIntegral w, fromIntegral h)
-
-read_pixels im w h = map (\(x, y) -> (x, y, pixelAt im x y)) [(x, y) | x <- [0..w - 1], y <- [0..h - 1]]
-
-dump_rgba8 (PixelRGBA8 r g b a) = (r, g, b, a)
-
-read_im :: FilePath -> IO [(Int, Int, Int, Int, Int)]
-read_im path = do
-    im_ <- readImageWithMetadata path
-    let (im, meta) = fromRight im_
-    let im8 = convertRGBA8 im
-    let (w, h) = fromJust $ get_dims meta
-    let pixels = read_pixels im8 w h
-    let fmt_pixels = map (\(x, y, c) -> (\(r, g, b, a) -> (x, y, r, g, b, a)) $ dump_rgba8 c) pixels
-    pure $ map (\(x, y, r, g, b, a) -> (x, y, fi r, fi g, fi b)) $ filter (\(x, y, r, g, b, a) -> a > 127) fmt_pixels
-    where fi = fromIntegral
-
-move_im dx dy = map (\(x, y, r, g, b) -> (x + dx, y + dy, r, g, b))
-recolor_im (r, g, b) = map (\(x, y, _, _, _) -> (x, y, r, g, b))
-black_im = recolor_im (0, 0, 0)
 
 plot_fn f = [(x, floor y, r, g, b) |
     x <- [0..1280],
@@ -100,7 +73,7 @@ paddle rb im (s, _) = do
                 then recolor_im (rainbow c) moved_im
                 else moved_im
 
-            write_image s $ black_im im
+            write_image s $ recolor_im (0, 0, 0) im
             write_image s n_im
 
             paddle_ s n_im (c + 1)
@@ -138,6 +111,8 @@ main = do
         Just "border" -> pure $ conf_im border
         Just "clear" -> pure $ conf_im clear
         Just "ant" -> pure ant
-        Just s -> read_im s >>= pure . paddle False
+        Just "im" -> case (listToMaybe $ drop 1 args) of
+                Nothing -> error "command \"im\" needs an argument :("
+                Just s -> read_im s >>= pure . paddle False
 
     connect "pixelflut.uwu.industries" "1234" f

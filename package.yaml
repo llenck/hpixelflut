@@ -24,6 +24,8 @@ dependencies:
 - network-simple
 - bytestring
 - JuicyPixels
+- Rasterific
+- FontyFruity
 
 library:
   source-dirs: src

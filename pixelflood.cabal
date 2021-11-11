@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       FlutFmt
+      FlutImage
       FlutIO
       Rainbow
   other-modules:
@@ -33,7 +34,9 @@ library
   hs-source-dirs:
       src
   build-depends:
-      JuicyPixels
+      FontyFruity
+    , JuicyPixels
+    , Rasterific
     , base >=4.7 && <5
     , bytestring
     , network-simple
@@ -47,7 +50,9 @@ executable pixelflood-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      JuicyPixels
+      FontyFruity
+    , JuicyPixels
+    , Rasterific
     , base >=4.7 && <5
     , bytestring
     , network-simple
@@ -63,7 +68,9 @@ test-suite pixelflood-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      JuicyPixels
+      FontyFruity
+    , JuicyPixels
+    , Rasterific
     , base >=4.7 && <5
     , bytestring
     , network-simple
