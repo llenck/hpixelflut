@@ -6,28 +6,26 @@ import Control.Monad
 import Data.Maybe
 
 import Network.Simple.TCP
-import Graphics.Text.TrueType(loadFontFile)
-import Graphics.Rasterific
-import Graphics.Rasterific.Texture
 
 import FlutFmt
 import FlutIO (conf_im, write_image, read_pixel_block)
-import FlutImage (read_im, move_im, recolor_im)
+import FlutImage (read_im, move_im, recolor_im, render_text)
 import Rainbow
 
 plot_fn f = [(x, floor y, r, g, b) |
     x <- [0..1280],
     let n_x = fromIntegral x / 1280,
-    let y = 360 + f n_x * (-360),
+    let y = 360 + f n_x * (-30),
     --let (r, g, b) = (255, 255, 255)]
-    let (r, g, b) = rainbow $ floor y]
+    let (r, g, b) = rainbow $ x + floor y]
 
 sine_plot _ = pure $ plot_fn (sin . (*6.283))
 
-sine_plots :: [Socket -> IO [(Int, Int, Int, Int, Int)]]
-sine_plots = do
+_sine_plots :: [[(Int, Int, Int, Int, Int)]]
+_sine_plots = do
     i <- [0..30]
-    [\_ -> pure $ plot_fn (\x -> sin (x * 15 + i * 5))]
+    [plot_fn (\x -> sin (x * 15 + i * 5))]
+sine_plots = foldl (++) [] _sine_plots
 
 copy fx fy w h tx ty s = do
     let coords = [(x, y) | x <- [fx..fx + w], y <- [fy..fy + h]]
@@ -53,6 +51,9 @@ paddle rb im (s, _) = do
     paddle_ s im 0
     pure ()
     where paddle_ s im c = do
+            write_image s $ recolor_im (0, 0, 0) im
+            write_image s im
+
             ch <- getChar
             let dy = case ch of
                     'w' -> -10
@@ -72,9 +73,6 @@ paddle rb im (s, _) = do
             let n_im = if rb
                 then recolor_im (rainbow c) moved_im
                 else moved_im
-
-            write_image s $ recolor_im (0, 0, 0) im
-            write_image s n_im
 
             paddle_ s n_im (c + 1)
 
@@ -102,17 +100,34 @@ ant (s, _) = do
             write_image s new_px
             ant_ nx ny new_dir
 
+(!?) :: [a] -> Int -> Maybe a
+l !? n = listToMaybe $ drop n l
+
 main = do
     args <- getArgs
 
-    f <- case (listToMaybe args) of
+    f <- case (args !? 0) of
         Nothing -> pure $ paddle False paddle_im
         Just "gay" -> pure $ paddle True paddle_im
         Just "border" -> pure $ conf_im border
         Just "clear" -> pure $ conf_im clear
+        Just "gay-sinus" -> pure $ conf_im sine_plots
         Just "ant" -> pure ant
-        Just "im" -> case (listToMaybe $ drop 1 args) of
+        Just "im" -> case (args !? 1) of
                 Nothing -> error "command \"im\" needs an argument :("
                 Just s -> read_im s >>= pure . paddle False
+
+        Just "text" -> case (args !? 1, args !? 2, args !? 3) of
+                (Just f, Just s, Just "gay") ->
+                    render_text f s >>= pure . paddle True
+
+                (Just f, Just s, _) ->
+                    render_text f s >>= pure . paddle False
+
+                _ -> error "command \"text\" needs two arguments :("
+
+--        Just "image_loc" -> case (args !? 2, args !? 3, args !? 4) of
+--                _ -> error "command \"image_loc\" needs an image and an offset"
+--                (Just s, Just x, Just y) -> read_im s
 
     connect "pixelflut.uwu.industries" "1234" f
