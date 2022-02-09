@@ -1,6 +1,7 @@
 module FlutImage (read_im, move_im, recolor_im, render_text) where
 
 import Data.Maybe
+import Control.Monad (guard)
 
 import Codec.Picture (readImageWithMetadata, convertRGBA8, pixelAt, PixelRGBA8(PixelRGBA8))
 import Codec.Picture.Metadata as M (Metadatas, Keys(Width, Height), lookup)
@@ -23,7 +24,7 @@ read_pixels im w h = map (\(x, y) -> (x, y, pixelAt im x y)) [(x, y) | x <- [0..
 
 im8_fmt im8 w h = filter_alpha (expand_color $ read_pixels im8 w h)
     where fi = fromIntegral
-          filter_alpha = mapMaybe (\(x, y, r, g, b, a) -> if (a > 127) then Just (x, y, fi r, fi g, fi b) else Nothing)
+          filter_alpha = mapMaybe (\(x, y, r, g, b, a) -> guard (a > 127) >> return (x, y, fi r, fi g, fi b))
           expand_color = map (\(x, y, PixelRGBA8 r g b a) -> (x, y, r, g, b, a))
 
 read_im :: FilePath -> IO [(Int, Int, Int, Int, Int)]
